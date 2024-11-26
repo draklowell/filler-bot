@@ -3,7 +3,7 @@
 """
 Algorithm
 """
-from typing import Any
+from typing import Any, Callable
 import sys
 
 
@@ -13,7 +13,7 @@ def debug(message: Any, end: str = "\n", flush: bool = False) -> None:
 
     :param message: Any
     :param end: str, string that will be added to the end of
-    the message, default is newline character
+        the message, default is newline character
     :param flush: bool
     """
 
@@ -27,15 +27,15 @@ def read_player_info() -> dict[str, int]:
     functions.
 
     Example of player info:
-    $$$ exec p2 : [./player1.py]
+        $$$ exec p2 : [./player1.py]
 
     Each value of the char map represent:
-    0 - empty cell
-    1 - player1, lately placed cell or
-    filled cell in the figure
-    2 - player 1, oldly placed cell
-    3 - player 2, lately placed cell
-    4 - player 2, oldly placed cell
+        0 - empty cell
+        1 - player1, lately placed cell or
+        filled cell in the figure
+        2 - player 1, oldly placed cell
+        3 - player 2, lately placed cell
+        4 - player 2, oldly placed cell
 
     :returns: dict[str, int], char map
     """
@@ -67,26 +67,25 @@ def read_field(char_map: dict[str, int]) -> list[list[int]]:
     Read the field data from the stdin.
 
     Example of the field:
-    Plateau 15 17:
-        01234567890123456
-    000 .................
-    001 .................
-    002 .................
-    003 .................
-    004 .................
-    005 .................
-    006 .................
-    007 ..O..............
-    008 ..OOO............
-    009 .................
-    010 .................
-    011 .................
-    012 ..............X..
-    013 .................
-    014 .................
+        Plateau 15 17:
+            01234567890123456
+        000 .................
+        001 .................
+        002 .................
+        003 .................
+        004 .................
+        005 .................
+        006 .................
+        007 ..O..............
+        008 ..OOO............
+        009 .................
+        010 .................
+        011 .................
+        012 ..............X..
+        013 .................
+        014 .................
 
-    :param char_map: dict[str, int], char map from the
-    read_player_info
+    :param char_map: dict[str, int], char map from the read_player_info
 
     :returns: list[list[int]], field as the matrix
     """
@@ -112,12 +111,11 @@ def read_figure(char_map: dict[str, int]) -> list[list[int]]:
     Read the figure from the stdin.
 
     The input may look like this:
-    Piece 2 2:
-    **
-    ..
+        Piece 2 2:
+        **
+        ..
 
-    :param char_map: dict[str, int], char map from the
-    read_player_info
+    :param char_map: dict[str, int], char map from the read_player_info
 
     :returns: list[list[int]], figure as the matrix
     """
@@ -143,7 +141,7 @@ def crop_figure(figure: list[list[int]]) -> tuple[int, int]:
     :param figure: list[list[int]], figure as the matrix
 
     :returns: tuple[int, int], offset of new coordinates in
-    the (row, col) form
+        the (row, col) form
     """
     discarded_rows = 0
     # Crop upper rows
@@ -189,12 +187,12 @@ def blit_figure(
     Draw figure at the given position on the field (creates new field).
 
     :param offset: tuple[int, int], coordinates to
-    put figure at
+        put figure at
     :param field: list[list[int]], field as the matrix
     :param figure: list[list[int]], figure as the matrix
 
     :returns: list[list[int]] | None, new field as the matrix or None
-    if couldn't put figure
+        if couldn't put figure
     """
 
     new_field = [row[:] for row in field]
@@ -223,16 +221,25 @@ def blit_figure(
     return new_field
 
 
-def evaluate_placement(new_field):
-    return 1  # debug(f"PLACEMENT EVALUATION | Pass")
-
-
-def update(char_map: dict[str, int]):
+def update(
+    char_map: dict[str, int],
+    evaluate_placement: Callable[[list[list[int]]], float] = lambda field: 1,
+):
     """
     Process forward in the game (process next step).
 
     :param char_map: char map from the read_player_info
-    function
+        function
+    :param evaluate_placement: Callable[[list[list[int]]], float],
+        function that evaluates confidence for each figure placement.
+        Takes field as the matrix and returns confidence as float.
+        Each cell of the field could be of this value:
+            0 - empty cell
+            1 - player1, lately placed cell
+            2 - player 1, oldly placed cell
+            3 - player 2, lately placed cell
+            4 - player 2, oldly placed cell
+
     """
     field = read_field(char_map)
     figure = read_figure(char_map)
@@ -266,17 +273,27 @@ def update(char_map: dict[str, int]):
     print(*best_placement[:2])
 
 
-def main():
+def mainloop(evaluate_placement: Callable[[list[list[int]]], float] = lambda field: 1):
     """
     Function where main code sits.
+
+    :param evaluate_placement: Callable[[list[list[int]]], float],
+        function that evaluates confidence for each figure placement.
+        Takes field as the matrix and returns confidence as float.
+        Each cell of the field could be of this value:
+            0 - empty cell
+            1 - player1, lately placed cell
+            2 - player 1, oldly placed cell
+            3 - player 2, lately placed cell
+            4 - player 2, oldly placed cell
     """
     char_map = read_player_info()
     try:
         while True:
-            update(char_map)
+            update(char_map, evaluate_placement)
     except EOFError:
         debug("MAINLOOP | Cannot get input. Looks like we've lost")
 
 
 if __name__ == "__main__":
-    main()
+    mainloop()
