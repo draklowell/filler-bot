@@ -95,13 +95,14 @@ def read_field(char_map: dict[str, int]) -> list[list[int]]:
 
     _, height, _ = info.split()
     # Ignore column indicies
-    input()
+    debug(f"READ FILE | {input()}")
 
     field = []
     for _ in range(int(height)):
-        _, row = input().split(" ", 1)
+        row = input()
+        debug(f"READ FILE | {row}")
 
-        field.append([char_map[char] for char in row])
+        field.append([char_map[char] for char in row.split(" ", 1)[1]])
 
     return field
 
@@ -128,6 +129,7 @@ def read_figure(char_map: dict[str, int]) -> list[list[int]]:
     figure = []
     for _ in range(int(height)):
         row = input()
+        debug(f"READ FIGURE | {row}")
         figure.append([char_map[char] for char in row])
 
     return figure
@@ -208,12 +210,15 @@ def blit_figure(
                 return None
 
             # Only 1 coincidence is allowed
-            if col and coincidence_found:
+            if field_col != 0 and coincidence_found:
                 return None
 
-            if col:
+            if field_col != 0:
                 coincidence_found = True
             new_field[position[0] + offset_row][position[1] + offset_col] = 1
+
+    if not coincidence_found:
+        return None
 
     return new_field
 
@@ -258,7 +263,7 @@ def update(char_map: dict[str, int]):
         return
 
     debug(f"PLACEMENT EVALUATION | Best placement: {best_placement}")
-    print(best_placement[:2])
+    print(*best_placement[:2])
 
 
 def main():
