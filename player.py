@@ -1,7 +1,13 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Algorithm
+FILLER-BOT
+Andrii Kryvyi
+Ukrainian Catholic University
+
+Player main code library, which could be used from
+different algorithm implementations to be safely
+used in filler game.
 """
 from typing import Any, Callable
 import sys
