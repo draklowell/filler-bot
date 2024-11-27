@@ -48,7 +48,7 @@ def read_player_info() -> dict[str, int]:
     info = input()
     debug(f"Player info: {info}")
 
-    if info[9:11] == "p1":
+    if info.removeprefix("$$$ exec ").startswith("p1"):
         return {
             ".": 0,
             "*": 1,
@@ -100,12 +100,12 @@ def read_field(char_map: dict[str, int]) -> list[list[int]]:
 
     _, height, _ = info.split()
     # Ignore column indicies
-    debug(f"READ FILE | {input()}")
+    debug(f"READ FIELD | {input()}")
 
     field = []
     for _ in range(int(height)):
         row = input()
-        debug(f"READ FILE | {row}")
+        debug(f"READ FIELD | {row}")
 
         field.append([char_map[char] for char in row.split(" ", 1)[1]])
 
