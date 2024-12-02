@@ -63,7 +63,7 @@ def evaluate_field(field: list[list[int]], fsm_storage: dict[str, Any]) -> None:
 
 def get_distance_at(
     position: tuple[int, int], field: list[list[int]], fsm_storage: dict[str, Any]
-) -> int:
+) -> float:
     """
     Calculate the distance from the given point to the nearest
     enemy cell using quickdist.
@@ -73,12 +73,12 @@ def get_distance_at(
     :param field: list[list[int]]
     :param fsm_storage: dict[str, Any]
 
-    :returns: int, distance to the neares enemy cell
+    :returns: float, distance to the nearest enemy cell
     """
     if position in fsm_storage["cache"]:
         return fsm_storage["cache"][position]
 
-    distance_minimal = None
+    distance_minimal = 0
     quickdist_maximal = None
     for row, col, quickdist in expanding_distance(position):
         if quickdist_maximal and quickdist >= quickdist_maximal:
