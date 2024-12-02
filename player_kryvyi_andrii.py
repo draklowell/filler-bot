@@ -10,6 +10,8 @@ import sys
 from itertools import count
 from typing import Any, Generator
 
+### ABSTRACT FUNCTIONS ###
+
 
 def expanding_distance(
     center: tuple[int, int]
@@ -44,83 +46,54 @@ def expanding_distance(
             yield (center[0] - offset, center[1] + suboffset, offset)
 
 
-def get_distance_at(
-    position: tuple[int, int],
-    field: list[list[int]],
-    cache: dict[tuple[int, int], float],
-) -> float:
+def crop_figure(figure: list[list[int]]) -> tuple[int, int]:
     """
-    Calculate the distance from the given point to the nearest
-    enemy cell using quickdist.
+    Crop the figure inplace.
+    Cuts off empty lines and columns on the borders.
 
-    :param position: tuple[int, int], position in the
-        (row, col) form
-    :param field: list[list[int]]
-    :param cache: dict[tuple[int, int], float]
+    :param figure: list[list[int]], figure as the matrix
 
-    :returns: float, distance to the nearest enemy cell
+    :returns: tuple[int, int], offset of new coordinates in
+        the (row, col) form
     """
-    if position in cache:
-        return cache[position]
-
-    distance_minimal = 0
-    quickdist_maximal = None
-    for row, col, quickdist in expanding_distance(position):
-        if quickdist_maximal and quickdist >= quickdist_maximal:
+    discarded_rows = 0
+    # Crop upper rows
+    while True:
+        if any(figure[0]):
             break
 
-        if quickdist > max(len(field), len(field[0])):
-            return 0
+        del figure[0]
+        discarded_rows += 1
 
-        if not 0 <= row < len(field):
-            continue
-        if not 0 <= col < len(field[0]):
-            continue
-        if field[row][col] not in (3, 4):
-            continue
+    # Crop lower rows
+    while True:
+        if any(figure[-1]):
+            break
 
-        distance = math.sqrt((row - position[0]) ** 2 + (col - position[1]) ** 2)
-        if not quickdist_maximal:
-            quickdist_maximal = distance
-            distance_minimal = distance
-        else:
-            distance_minimal = min(distance_minimal, distance)
+        del figure[-1]
 
-    cache[position] = distance_minimal
-    return distance_minimal
+    # Crop left cols
+    discarded_cols = 0
+    while True:
+        if any(map(lambda row: row[0], figure)):
+            break
+
+        for row in figure:
+            del row[0]
+        discarded_cols += 1
+
+    # Crop right cols
+    while True:
+        if any(map(lambda row: row[-1], figure)):
+            break
+
+        for row in figure:
+            del row[-1]
+
+    return (discarded_rows, discarded_cols)
 
 
-def evaluate_placement(
-    position: tuple[int, int],
-    field: list[list[int]],
-    figure: list[list[int]],
-    cache: dict[tuple[int, int], float],
-    max_confidence: float | None,
-) -> float | None:
-    """
-    Callback that is called every possible placement.
-
-    :param position: tuple[int, int], coordinates to
-        put figure at
-    :param field: list[list[int]], field as the matrix
-    :param figure: list[list[int]], figure as the matrix
-    :param max_confidence: float | None, previous maximum confidence
-        or None if not available
-
-    :returns: float | None, confidence of the placement or None
-        if confidence is lower then given
-    """
-    confidence = 0
-    for offset_row, row in enumerate(figure):
-        for offset_col, col in enumerate(row):
-            if col:
-                confidence -= get_distance_at(
-                    (position[0] + offset_row, position[1] + offset_col), field, cache
-                )
-                if max_confidence is not None and confidence < max_confidence:
-                    return None
-
-    return confidence
+### I/O FUNCTIONS ###
 
 
 def debug(message: Any, end: str = "\n", flush: bool = False) -> None:
@@ -249,51 +222,86 @@ def read_figure(char_map: dict[str, int]) -> list[list[int]]:
     return figure
 
 
-def crop_figure(figure: list[list[int]]) -> tuple[int, int]:
-    """
-    Crop the figure inplace.
-    Cuts off empty lines and columns on the borders.
+### MAIN CODE ###
 
+
+def get_distance_at(
+    position: tuple[int, int],
+    field: list[list[int]],
+    cache: dict[tuple[int, int], float],
+) -> float:
+    """
+    Calculate the distance from the given point to the nearest
+    enemy cell using quickdist.
+
+    :param position: tuple[int, int], position in the
+        (row, col) form
+    :param field: list[list[int]]
+    :param cache: dict[tuple[int, int], float]
+
+    :returns: float, distance to the nearest enemy cell
+    """
+    if position in cache:
+        return cache[position]
+
+    distance_minimal = 0
+    quickdist_maximal = None
+    for row, col, quickdist in expanding_distance(position):
+        if quickdist_maximal and quickdist >= quickdist_maximal:
+            break
+
+        if quickdist > max(len(field), len(field[0])):
+            return 0
+
+        if not 0 <= row < len(field):
+            continue
+        if not 0 <= col < len(field[0]):
+            continue
+        if field[row][col] not in (3, 4):
+            continue
+
+        distance = math.sqrt((row - position[0]) ** 2 + (col - position[1]) ** 2)
+        if not quickdist_maximal:
+            quickdist_maximal = distance
+            distance_minimal = distance
+        else:
+            distance_minimal = min(distance_minimal, distance)
+
+    cache[position] = distance_minimal
+    return distance_minimal
+
+
+def evaluate_placement(
+    position: tuple[int, int],
+    field: list[list[int]],
+    figure: list[list[int]],
+    cache: dict[tuple[int, int], float],
+    max_confidence: float | None,
+) -> float | None:
+    """
+    Callback that is called every possible placement.
+
+    :param position: tuple[int, int], coordinates to
+        put figure at
+    :param field: list[list[int]], field as the matrix
     :param figure: list[list[int]], figure as the matrix
+    :param max_confidence: float | None, previous maximum confidence
+        or None if not available
 
-    :returns: tuple[int, int], offset of new coordinates in
-        the (row, col) form
+    :returns: float | None, confidence of the placement or None
+        if confidence is lower then given
     """
-    discarded_rows = 0
-    # Crop upper rows
-    while True:
-        if any(figure[0]):
-            break
+    confidence = 0
+    for offset_row, row in enumerate(figure):
+        for offset_col, col in enumerate(row):
+            if col:
+                confidence -= get_distance_at(
+                    (position[0] + offset_row, position[1] + offset_col), field, cache
+                )
+                if max_confidence is not None and confidence < max_confidence:
+                    return None
 
-        del figure[0]
-        discarded_rows += 1
-
-    # Crop lower rows
-    while True:
-        if any(figure[-1]):
-            break
-
-        del figure[-1]
-
-    # Crop left cols
-    discarded_cols = 0
-    while True:
-        if any(map(lambda row: row[0], figure)):
-            break
-
-        for row in figure:
-            del row[0]
-        discarded_cols += 1
-
-    # Crop right cols
-    while True:
-        if any(map(lambda row: row[-1], figure)):
-            break
-
-        for row in figure:
-            del row[-1]
-
-    return (discarded_rows, discarded_cols)
+    return confidence
 
 
 def validate_placement(
