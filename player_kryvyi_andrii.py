@@ -69,6 +69,9 @@ def get_distance_at(
         if quickdist_maximal and quickdist >= quickdist_maximal:
             break
 
+        if quickdist > max(len(field), len(field[0])):
+            return 0
+
         if not 0 <= row < len(field):
             continue
         if not 0 <= col < len(field[0]):
@@ -88,24 +91,36 @@ def get_distance_at(
 
 
 def evaluate_placement(
-    field: list[list[int]], cache: dict[tuple[int, int], float]
-) -> float:
+    position: tuple[int, int],
+    field: list[list[int]],
+    figure: list[list[int]],
+    cache: dict[tuple[int, int], float],
+    max_confidence: float | None,
+) -> float | None:
     """
     Callback that is called every possible placement.
 
-    :param field: list[list[int]]
-    :param cache: dict[tuple[int, int], float], cache for
-        distances to enemy cells
+    :param position: tuple[int, int], coordinates to
+        put figure at
+    :param field: list[list[int]], field as the matrix
+    :param figure: list[list[int]], figure as the matrix
+    :param max_confidence: float | None, previous maximum confidence
+        or None if not available
 
-    :returns: float, confidence of the placement
+    :returns: float | None, confidence of the placement or None
+        if confidence is lower then given
     """
-    score = 0
-    for row_idx, row in enumerate(field):
-        for col_idx, col in enumerate(row):
-            if col == 1:
-                score -= get_distance_at((row_idx, col_idx), field, cache)
+    confidence = 0
+    for offset_row, row in enumerate(figure):
+        for offset_col, col in enumerate(row):
+            if col:
+                confidence -= get_distance_at(
+                    (position[0] + offset_row, position[1] + offset_col), field, cache
+                )
+                if max_confidence is not None and confidence < max_confidence:
+                    return None
 
-    return score
+    return confidence
 
 
 def debug(message: Any, end: str = "\n", flush: bool = False) -> None:
@@ -281,22 +296,21 @@ def crop_figure(figure: list[list[int]]) -> tuple[int, int]:
     return (discarded_rows, discarded_cols)
 
 
-def blit_figure(
+def validate_placement(
     position: tuple[int, int], field: list[list[int]], figure: list[list[int]]
-) -> list[list[int]] | None:
+) -> bool:
     """
-    Draw figure at the given position on the field (creates new field).
+    Check wheter figure could be placed at the given position
+    on the field.
 
-    :param offset: tuple[int, int], coordinates to
+    :param position: tuple[int, int], coordinates to
         put figure at
     :param field: list[list[int]], field as the matrix
     :param figure: list[list[int]], figure as the matrix
 
-    :returns: list[list[int]] | None, new field as the matrix or None
-        if couldn't put figure
+    :returns: bool, True, if figure could be placed
     """
 
-    new_field = [row[:] for row in field]
     coincidence_found = False
     for offset_row, row in enumerate(figure):
         for offset_col, col in enumerate(row):
@@ -306,20 +320,16 @@ def blit_figure(
             field_col = field[position[0] + offset_row][position[1] + offset_col]
             # Can't place there, because enemy is there
             if field_col > 2:
-                return None
+                return False
 
             # Only 1 coincidence is allowed
             if field_col != 0 and coincidence_found:
-                return None
+                return False
 
             if field_col != 0:
                 coincidence_found = True
-            new_field[position[0] + offset_row][position[1] + offset_col] = 1
 
-    if not coincidence_found:
-        return None
-
-    return new_field
+    return coincidence_found
 
 
 def update(char_map: dict[str, int]):
@@ -338,20 +348,30 @@ def update(char_map: dict[str, int]):
     best_placement = ()
     for position_row in range(discarded_rows, len(field) - len(figure) + 1):
         for position_col in range(discarded_cols, len(field[0]) - len(figure[0]) + 1):
-            new_field = blit_figure((position_row, position_col), field, figure)
-            if not new_field:
+            if not validate_placement((position_row, position_col), field, figure):
                 continue
 
-            confidence = evaluate_placement(new_field, cache)
-            debug(
-                f"PLACEMENT EVALUATION | ({position_row - discarded_rows}, "
-                f"{position_col - discarded_cols}) = {confidence}"
+            confidence = evaluate_placement(
+                (position_row, position_col),
+                field,
+                figure,
+                cache,
+                best_placement[2] if best_placement else None,
             )
-            if not best_placement or confidence > best_placement[2]:
+            if confidence is not None:
+                debug(
+                    f"PLACEMENT EVALUATION | ({position_row - discarded_rows}, "
+                    f"{position_col - discarded_cols}) = {confidence}"
+                )
                 best_placement = (
                     position_row - discarded_rows,
                     position_col - discarded_cols,
                     confidence,
+                )
+            else:
+                debug(
+                    f"PLACEMENT EVALUATION | ({position_row - discarded_rows}, "
+                    f"{position_col - discarded_cols}): discarded"
                 )
 
     if not best_placement:
