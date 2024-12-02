@@ -9,8 +9,8 @@ Player main code library, which could be used from
 different algorithm implementations to be safely
 used in filler game.
 """
-from typing import Any, Callable
 import sys
+from typing import Any, Callable
 
 
 def debug(message: Any, end: str = "\n", flush: bool = False) -> None:

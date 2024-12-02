@@ -9,9 +9,9 @@ Algorithm that uses distance to the enemy to
 evaluate the best move:
 The lower the distance, the better the move.
 """
-from typing import Generator, Any
-from itertools import count
 import math
+from itertools import count
+from typing import Any, Generator
 
 from player import debug, mainloop
 
