@@ -229,17 +229,25 @@ def blit_figure(
 
 def update(
     char_map: dict[str, int],
-    evaluate_placement: Callable[[list[list[int]]], float] = lambda field: 1,
+    fsm_storage: dict,
+    evaluate_field: Callable[[list[list[int]], dict], None],
+    evaluate_placement: Callable[[list[list[int]], dict], float],
 ):
     """
     Process forward in the game (process next step).
 
-    :param char_map: char map from the read_player_info
-        function
-    :param evaluate_placement: Callable[[list[list[int]]], float],
+    :param char_map: dict[str, int], char map from the
+        read_player_info function
+    :param fsm_storage: dict, fsm storage, where information
+        from previous calls is stored
+    :param evaluate_field: Callable[[list[list[int]], dict], None],
+        function that is called each time field is read. Takes
+        field as the matrix and fsm storage
+    :param evaluate_placement: Callable[[list[list[int]], dict], float],
         function that evaluates confidence for each figure placement.
-        Takes field as the matrix and returns confidence as float.
-        Each cell of the field could be of this value:
+        Takes field as the matrix and fsm storage,
+        and returns confidence as float. Each cell of the field
+        could be of this value:
             0 - empty cell
             1 - player1, lately placed cell
             2 - player 1, oldly placed cell
@@ -248,6 +256,9 @@ def update(
 
     """
     field = read_field(char_map)
+
+    evaluate_field(field, fsm_storage)
+
     figure = read_figure(char_map)
     discarded_rows, discarded_cols = crop_figure(figure)
 
@@ -258,7 +269,7 @@ def update(
             if not new_field:
                 continue
 
-            confidence = evaluate_placement(new_field)
+            confidence = evaluate_placement(new_field, fsm_storage)
             debug(
                 f"PLACEMENT EVALUATION | ({position_row - discarded_rows}, "
                 f"{position_col - discarded_cols}) = {confidence}"
@@ -279,27 +290,32 @@ def update(
     print(*best_placement[:2])
 
 
-def mainloop(evaluate_placement: Callable[[list[list[int]]], float] = lambda field: 1):
+def mainloop(
+    evaluate_field: Callable[[list[list[int]], dict], None],
+    evaluate_placement: Callable[[list[list[int]], dict], float],
+):
     """
     Function where main code sits.
 
-    :param evaluate_placement: Callable[[list[list[int]]], float],
+    :param evaluate_field: Callable[[list[list[int]], dict], None],
+        function that is called each time field is read. Takes
+        field as the matrix and fsm storage
+    :param evaluate_placement: Callable[[list[list[int]], dict], float],
         function that evaluates confidence for each figure placement.
-        Takes field as the matrix and returns confidence as float.
-        Each cell of the field could be of this value:
+        Takes field as the matrix and fsm storage,
+        and returns confidence as float. Each cell of the field
+        could be of this value:
             0 - empty cell
             1 - player1, lately placed cell
             2 - player 1, oldly placed cell
             3 - player 2, lately placed cell
             4 - player 2, oldly placed cell
+
     """
     char_map = read_player_info()
+    fsm_storage = {}
     try:
         while True:
-            update(char_map, evaluate_placement)
+            update(char_map, fsm_storage, evaluate_field, evaluate_placement)
     except EOFError:
         debug("MAINLOOP | Cannot get input. Looks like we've lost")
-
-
-if __name__ == "__main__":
-    mainloop()
