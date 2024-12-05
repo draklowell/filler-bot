@@ -46,53 +46,6 @@ def expanding_distance(
             yield (center[0] - offset, center[1] + suboffset, offset)
 
 
-def crop_figure(figure: list[list[int]]) -> tuple[int, int]:
-    """
-    Crop the figure inplace.
-    Cuts off empty lines and columns on the borders.
-
-    :param figure: list[list[int]], figure as the matrix
-
-    :returns: tuple[int, int], offset of new coordinates in
-        the (row, col) form
-    """
-    discarded_rows = 0
-    # Crop upper rows
-    while True:
-        if any(figure[0]):
-            break
-
-        del figure[0]
-        discarded_rows += 1
-
-    # Crop lower rows
-    while True:
-        if any(figure[-1]):
-            break
-
-        del figure[-1]
-
-    # Crop left cols
-    discarded_cols = 0
-    while True:
-        if any(map(lambda row: row[0], figure)):
-            break
-
-        for row in figure:
-            del row[0]
-        discarded_cols += 1
-
-    # Crop right cols
-    while True:
-        if any(map(lambda row: row[-1], figure)):
-            break
-
-        for row in figure:
-            del row[-1]
-
-    return (discarded_rows, discarded_cols)
-
-
 ### I/O FUNCTIONS ###
 
 
@@ -187,15 +140,15 @@ def read_field(char_map: dict[str, int]) -> list[list[int]]:
 
     field = []
     for _ in range(int(height)):
-        row = input()
-        debug(f"READ FIELD | {row}")
+        line = input()
+        debug(f"READ FIELD | {line}")
 
-        field.append([char_map[char] for char in row.split(" ", 1)[1]])
+        field.append([char_map[char] for char in line.split(" ", 1)[1]])
 
     return field
 
 
-def read_figure(char_map: dict[str, int]) -> list[list[int]]:
+def read_figure() -> set[tuple[int, int]]:
     """
     Read the figure from the stdin.
 
@@ -204,20 +157,20 @@ def read_figure(char_map: dict[str, int]) -> list[list[int]]:
         **
         ..
 
-    :param char_map: dict[str, int], char map from the read_player_info
-
-    :returns: list[list[int]], figure as the matrix
+    :returns: set[tuple[int, int]], points of the figure
     """
     info = input()
     debug(f"READ FIGURE | {info}")
 
     _, height, _ = info.split()
 
-    figure = []
-    for _ in range(int(height)):
-        row = input()
-        debug(f"READ FIGURE | {row}")
-        figure.append([char_map[char] for char in row])
+    figure = set()
+    for row in range(int(height)):
+        line = input()
+        debug(f"READ FIGURE | {line}")
+        for col, char in enumerate(line):
+            if char == "*":
+                figure.add((row, col))
 
     return figure
 
@@ -274,7 +227,7 @@ def get_distance_at(
 def evaluate_placement(
     position: tuple[int, int],
     field: list[list[int]],
-    figure: list[list[int]],
+    figure: set[tuple[int, int]],
     cache: dict[tuple[int, int], float],
     max_confidence: float | None,
 ) -> float | None:
@@ -284,7 +237,7 @@ def evaluate_placement(
     :param position: tuple[int, int], coordinates to
         put figure at
     :param field: list[list[int]], field as the matrix
-    :param figure: list[list[int]], figure as the matrix
+    :param figure: set[tuple[int, int]], figure as the set of points
     :param max_confidence: float | None, previous maximum confidence
         or None if not available
 
@@ -292,20 +245,18 @@ def evaluate_placement(
         if confidence is lower then given
     """
     confidence = 0
-    for offset_row, row in enumerate(figure):
-        for offset_col, col in enumerate(row):
-            if col:
-                confidence -= get_distance_at(
-                    (position[0] + offset_row, position[1] + offset_col), field, cache
-                )
-                if max_confidence is not None and confidence < max_confidence:
-                    return None
+    for point in figure:
+        confidence -= get_distance_at(
+            (position[0] + point[0], position[1] + point[1]), field, cache
+        )
+        if max_confidence is not None and confidence < max_confidence:
+            return None
 
     return confidence
 
 
 def validate_placement(
-    position: tuple[int, int], field: list[list[int]], figure: list[list[int]]
+    position: tuple[int, int], field: list[list[int]], figure: set[tuple[int, int]]
 ) -> bool:
     """
     Check wheter figure could be placed at the given position
@@ -314,28 +265,31 @@ def validate_placement(
     :param position: tuple[int, int], coordinates to
         put figure at
     :param field: list[list[int]], field as the matrix
-    :param figure: list[list[int]], figure as the matrix
+    :param figure: set[tuple[int, int]], figure as the set of points
 
     :returns: bool, True, if figure could be placed
     """
 
     coincidence_found = False
-    for offset_row, row in enumerate(figure):
-        for offset_col, col in enumerate(row):
-            if not col:
-                continue
+    for point in figure:
+        row = position[0] + point[0]
+        if row >= len(field):
+            return False
+        col = position[1] + point[1]
+        if col >= len(field[0]):
+            return False
 
-            field_col = field[position[0] + offset_row][position[1] + offset_col]
-            # Can't place there, because enemy is there
-            if field_col > 2:
-                return False
+        value = field[position[0] + point[0]][position[1] + point[1]]
+        # Can't place there, because enemy is there
+        if value > 2:
+            return False
 
-            # Only 1 coincidence is allowed
-            if field_col != 0 and coincidence_found:
-                return False
+        # Only 1 coincidence is allowed
+        if value != 0 and coincidence_found:
+            return False
 
-            if field_col != 0:
-                coincidence_found = True
+        if value != 0:
+            coincidence_found = True
 
     return coincidence_found
 
@@ -350,37 +304,30 @@ def update(char_map: dict[str, int]):
     field = read_field(char_map)
     cache = {}
 
-    figure = read_figure(char_map)
-    discarded_rows, discarded_cols = crop_figure(figure)
+    figure = read_figure()
 
     best_placement = ()
-    for position_row in range(discarded_rows, len(field) - len(figure) + 1):
-        for position_col in range(discarded_cols, len(field[0]) - len(figure[0]) + 1):
-            if not validate_placement((position_row, position_col), field, figure):
+    for row in range(len(field)):
+        for col in range(len(field[0])):
+            if not validate_placement((row, col), field, figure):
                 continue
 
             confidence = evaluate_placement(
-                (position_row, position_col),
+                (row, col),
                 field,
                 figure,
                 cache,
                 best_placement[2] if best_placement else None,
             )
             if confidence is not None:
-                debug(
-                    f"PLACEMENT EVALUATION | ({position_row - discarded_rows}, "
-                    f"{position_col - discarded_cols}) = {confidence}"
-                )
+                debug(f"PLACEMENT EVALUATION | ({row}, {col}) = {confidence}")
                 best_placement = (
-                    position_row - discarded_rows,
-                    position_col - discarded_cols,
+                    row,
+                    col,
                     confidence,
                 )
             else:
-                debug(
-                    f"PLACEMENT EVALUATION | ({position_row - discarded_rows}, "
-                    f"{position_col - discarded_cols}): discarded"
-                )
+                debug(f"PLACEMENT EVALUATION | ({row}, {col}): discarded")
 
     if not best_placement:
         debug("PLACEMENT EVALUATION | Couldn't find best placement")
