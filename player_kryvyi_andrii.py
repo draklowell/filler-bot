@@ -6,9 +6,18 @@ Andrii Kryvyi
 Ukrainian Catholic University
 """
 import math
-import sys
 from itertools import count
-from typing import Any, Generator
+from logging import DEBUG, debug, getLogger
+from typing import Generator
+
+# We use the debugger to print messages to stderr
+# You cannot use print as you usually do, the vm would intercept it
+# You can hovever do the following:
+#
+# import sys
+# print("HEHEY", file=sys.stderr)
+
+getLogger().setLevel(DEBUG)
 
 ### ABSTRACT FUNCTIONS ###
 
@@ -47,19 +56,6 @@ def expanding_distance(
 
 
 ### I/O FUNCTIONS ###
-
-
-def debug(message: Any, end: str = "\n", flush: bool = False) -> None:
-    """
-    Print data to stderr to not interfer with filler vm.
-
-    :param message: Any
-    :param end: str, string that will be added to the end of
-        the message, default is newline character
-    :param flush: bool
-    """
-
-    print("DEBUG |", message, end=end, flush=flush, file=sys.stderr)
 
 
 def read_player_info() -> dict[str, int]:
@@ -132,16 +128,16 @@ def read_field(char_map: dict[str, int]) -> list[list[int]]:
     :returns: list[list[int]], field as the matrix
     """
     info = input()
-    debug(f"READ FIELD | {info}")
+    debug(f"Field info: {info}")
 
     _, height, _ = info.split()
     # Ignore column indicies
-    debug(f"READ FIELD | {input()}")
+    debug(f"Field info: {input()}")
 
     field = []
     for _ in range(int(height)):
         line = input()
-        debug(f"READ FIELD | {line}")
+        debug(f"Field info: {line}")
 
         field.append([char_map[char] for char in line.split(" ", 1)[1]])
 
@@ -160,14 +156,14 @@ def read_figure() -> set[tuple[int, int]]:
     :returns: set[tuple[int, int]], points of the figure
     """
     info = input()
-    debug(f"READ FIGURE | {info}")
+    debug(f"Figure info: {info}")
 
     _, height, _ = info.split()
 
     figure = set()
     for row in range(int(height)):
         line = input()
-        debug(f"READ FIGURE | {line}")
+        debug(f"Figure info: {line}")
         for col, char in enumerate(line):
             if char == "*":
                 figure.add((row, col))
@@ -320,21 +316,21 @@ def update(char_map: dict[str, int]):
                 best_placement[2] if best_placement else None,
             )
             if confidence is not None:
-                debug(f"PLACEMENT EVALUATION | ({row}, {col}) = {confidence}")
+                debug(f"Placement evaluation: ({row}, {col}) = {confidence}")
                 best_placement = (
                     row,
                     col,
                     confidence,
                 )
             else:
-                debug(f"PLACEMENT EVALUATION | ({row}, {col}): discarded")
+                debug(f"Placement evaluation: ({row}, {col}): discarded")
 
     if not best_placement:
-        debug("PLACEMENT EVALUATION | Couldn't find best placement")
+        debug("Placement evaluation: Couldn't find best placement")
         print(0, 0)
         return
 
-    debug(f"PLACEMENT EVALUATION | Best placement: {best_placement}")
+    debug(f"Placement evaluation: Best placement: {best_placement}")
     print(*best_placement[:2])
 
 
@@ -347,7 +343,7 @@ def mainloop():
         while True:
             update(char_map)
     except EOFError:
-        debug("MAINLOOP | Cannot get input. Looks like we've lost")
+        debug("Cannot get input. Looks like we've lost")
 
 
 if __name__ == "__main__":
