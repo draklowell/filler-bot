@@ -131,8 +131,8 @@ def read_field(char_map: dict[str, int]) -> list[list[int]]:
     # debug(f"Field info: {info}")
 
     _, height, _ = info.split()
-    input()
     # Ignore column indicies
+    input()
     # debug(f"Field info: {input()}")
 
     field = []
@@ -344,7 +344,7 @@ def mainloop():
         while True:
             update(char_map)
     except EOFError:
-        pass # debug("Cannot get input. Looks like we've lost")
+        debug("Cannot get input. Looks like we've lost")
 
 
 if __name__ == "__main__":
