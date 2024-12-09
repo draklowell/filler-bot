@@ -78,7 +78,7 @@ def read_player_info() -> dict[str, int]:
     :returns: dict[str, int], char map
     """
     info = input()
-    debug(f"Player info: {info}")
+    # debug(f"Player info: {info}")
 
     if info.removeprefix("$$$ exec ").startswith("p1"):
         return {
@@ -128,16 +128,17 @@ def read_field(char_map: dict[str, int]) -> list[list[int]]:
     :returns: list[list[int]], field as the matrix
     """
     info = input()
-    debug(f"Field info: {info}")
+    # debug(f"Field info: {info}")
 
     _, height, _ = info.split()
+    input()
     # Ignore column indicies
-    debug(f"Field info: {input()}")
+    # debug(f"Field info: {input()}")
 
     field = []
     for _ in range(int(height)):
         line = input()
-        debug(f"Field info: {line}")
+        # debug(f"Field info: {line}")
 
         field.append([char_map[char] for char in line.split(" ", 1)[1]])
 
@@ -156,14 +157,14 @@ def read_figure() -> set[tuple[int, int]]:
     :returns: set[tuple[int, int]], points of the figure
     """
     info = input()
-    debug(f"Figure info: {info}")
+    # debug(f"Figure info: {info}")
 
     _, height, _ = info.split()
 
     figure = set()
     for row in range(int(height)):
         line = input()
-        debug(f"Figure info: {line}")
+        # debug(f"Figure info: {line}")
         for col, char in enumerate(line):
             if char == "*":
                 figure.add((row, col))
@@ -316,21 +317,21 @@ def update(char_map: dict[str, int]):
                 best_placement[2] if best_placement else None,
             )
             if confidence is not None:
-                debug(f"Placement evaluation: ({row}, {col}) = {confidence}")
+                # debug(f"Placement evaluation: ({row}, {col}) = {confidence}")
                 best_placement = (
                     row,
                     col,
                     confidence,
                 )
             else:
-                debug(f"Placement evaluation: ({row}, {col}): discarded")
+                pass # debug(f"Placement evaluation: ({row}, {col}): discarded")
 
     if not best_placement:
-        debug("Placement evaluation: Couldn't find best placement")
+        # debug("Placement evaluation: Couldn't find best placement")
         print(0, 0)
         return
 
-    debug(f"Placement evaluation: Best placement: {best_placement}")
+    # debug(f"Placement evaluation: Best placement: {best_placement}")
     print(*best_placement[:2])
 
 
@@ -343,7 +344,7 @@ def mainloop():
         while True:
             update(char_map)
     except EOFError:
-        debug("Cannot get input. Looks like we've lost")
+        pass # debug("Cannot get input. Looks like we've lost")
 
 
 if __name__ == "__main__":
