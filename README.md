@@ -15,7 +15,7 @@ After that, you can use the bot in the game:
 ### What does "as close as possible" mean
 Let's define the following "confidence" function:
 
-$$f(P) = \sum_{p\in P}\min\\{|p, q|: q\in Q\\}$$
+$$f(P) = -\sum_{p\in P}\min\\{|p, q|: q\in Q\\}$$
 
 Where $$Q$$ is a set of all enemy points and $$P$$ is a set of points that potentially will be placed. So the algorithm's goal is to find such $$P$$, which maximizes $$f(P)$$.
 
